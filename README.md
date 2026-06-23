@@ -2,9 +2,11 @@
 
 ### AI-Powered Data Intelligence and Decision Support
 
-ZubeAnalystOS is a professional Streamlit workspace that supports the practical data-analysis lifecycle—from raw CSV or Excel data to preparation, exploratory analysis, statistical investigation, predictive insight, executive communication, and reusable reporting.
+ZubeAnalystOS is a responsive Streamlit workspace that supports the practical data-analysis lifecycle—from raw CSV or Excel data to preparation, exploratory analysis, statistical investigation, predictive insight, executive communication, and reusable reporting across desktop, tablet, and mobile screens.
 
 The platform is designed for analysts who need depth and for business leaders who need clear, decision-ready explanations rather than statistical jargon.
+
+Top-level workspaces are selected from the collapsible sidebar. On mobile, Streamlit's sidebar control acts as the compact application menu; contextual task tabs remain inside Prepare and Decision Lab.
 
 ## Core capabilities
 
@@ -31,7 +33,8 @@ The platform is designed for analysts who need depth and for business leaders wh
 
 ### Exploration and visualization
 
-- Interactive Plotly distributions, rankings, box plots, scatter plots, heatmaps, and time series.
+- An adaptive Plotly chart studio with column, bar, grouped, stacked, pie, doughnut, line, area, scatter, bubble, histogram, box, violin, heatmap, treemap, sunburst, funnel, radar, and waterfall charts.
+- Chart-specific controls for measures, calculations, category limits, series, hierarchy, frequency, and layout.
 - Seaborn statistical distributions and violin plots.
 - Correlation and relationship analysis.
 - Data-quality, completeness, outlier, type, and cardinality diagnostics.
@@ -128,7 +131,7 @@ pip install -r requirements-dev.txt
 pytest -m "not live"
 ```
 
-The current suite contains 51 deterministic tests covering transformations, statistical and predictive tools, Streamlit state transitions, downloads, project recipes, timeouts, and mocked AI behavior.
+The current suite contains 63 deterministic tests covering transformations, statistical and predictive tools, all chart families, sidebar navigation, Streamlit state transitions, downloads, project recipes, responsive-layout guards, timeouts, and mocked AI behavior.
 
 The live OpenRouter smoke test is deliberately opt-in and uses only synthetic data:
 

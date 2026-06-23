@@ -42,12 +42,23 @@ PROJECTS_DIR = Path(os.getenv("ZUBE_PROJECTS_DIR", "projects"))
 ACCENT = "#7C5CFC"
 TEAL = "#24C8A5"
 PLOTLY_COLORS = [ACCENT, "#A78BFA", TEAL, "#60A5FA", "#F59E0B", "#FB7185"]
+WORKSPACE_SECTIONS = [
+    "Overview",
+    "Prepare",
+    "Quality",
+    "Visuals",
+    "Relationships",
+    "KPIs",
+    "Decision Lab",
+    "AI Brief",
+    "Data & Export",
+]
 
 st.set_page_config(
     page_title="ZubeAnalystOS · AI Data Intelligence",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
 )
 
 
@@ -59,11 +70,31 @@ def inject_styles() -> None:
         :root { --accent:#7C5CFC; --teal:#24C8A5; --ink:#172033; --muted:#667085; }
         html, body, [class*="css"] { font-family:'DM Sans',sans-serif; }
         h1, h2, h3 { font-family:'Manrope',sans-serif !important; letter-spacing:-0.035em; }
-        .stApp { background:linear-gradient(140deg,#F8F9FF 0%,#FFFFFF 42%,#F4FBFA 100%); }
+        .stApp { background:linear-gradient(140deg,#F8F9FF 0%,#FFFFFF 42%,#F4FBFA 100%); color:#344054; }
+        [data-testid="stMain"] { min-width:0; overflow-x:hidden; }
+        [data-testid="stMain"] :is(h1,h2,h3) { color:#172033; }
+        [data-testid="stMain"] h1 { overflow-wrap:anywhere; }
         [data-testid="stSidebar"] { background:#111827; border-right:1px solid rgba(255,255,255,.08); }
         [data-testid="stSidebar"] :is(p, span, label, h1, h2, h3, small) { color:#F9FAFB; }
         [data-testid="stSidebar"] [data-baseweb="select"] > div,
         [data-testid="stSidebar"] [data-baseweb="input"] > div { background:#1F2937; }
+        [data-testid="stSidebar"] [role="radiogroup"] { gap:.35rem; }
+        [data-testid="stSidebar"] [role="radiogroup"] label {
+          min-height:2.65rem;padding:.48rem .65rem;border:1px solid transparent;border-radius:11px;
+          background:rgba(255,255,255,.025);transition:background .16s ease,border-color .16s ease,transform .16s ease;
+        }
+        [data-testid="stSidebar"] [role="radiogroup"] label:hover {
+          background:rgba(124,92,252,.16);border-color:rgba(167,139,250,.28);transform:translateX(2px);
+        }
+        [data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {
+          background:linear-gradient(100deg,rgba(101,71,232,.92),rgba(124,92,252,.92));
+          border-color:rgba(255,255,255,.22);box-shadow:0 7px 20px rgba(76,52,190,.24);
+        }
+        [data-testid="stSidebar"] [role="radiogroup"] label :is(p,span) { color:#D7DCEC !important;font-weight:600; }
+        [data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) :is(p,span) { color:#FFFFFF !important; }
+        [data-testid="stSidebar"] [role="radiogroup"] label:focus-within {
+          outline:2px solid #24C8A5;outline-offset:2px;
+        }
         [data-testid="stSidebar"] .stButton > button {
           background:linear-gradient(100deg,#6547E8 0%,#7C5CFC 55%,#8B6CFF 100%);
           border:1px solid rgba(255,255,255,.2);color:#FFFFFF !important;
@@ -112,18 +143,80 @@ def inject_styles() -> None:
         .insight-card .label { color:#A78BFA;font-weight:700;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em; }
         .insight-card .value { font-family:Manrope;font-size:1.15rem;font-weight:700;margin-top:.5rem;line-height:1.45; }
         .quality-good { color:#079455;font-weight:700; } .quality-warn { color:#DC6803;font-weight:700; }
-        div[data-testid="stPlotlyChart"] { background:#FFF;border:1px solid #EAECF0;border-radius:18px;padding:.4rem;
+        div[data-testid="stPlotlyChart"] { width:100%;min-width:0;background:#FFF;border:1px solid #EAECF0;border-radius:18px;padding:.4rem;
           box-shadow:0 8px 30px rgba(16,24,40,.035); }
-        div[data-testid="stDataFrame"] { border:1px solid #EAECF0;border-radius:14px;overflow:hidden; }
-        .stTabs [data-baseweb="tab-list"] { gap:.3rem;background:#F2F4F7;padding:.35rem;border-radius:14px; }
-        .stTabs [data-baseweb="tab"] { border-radius:10px;padding:.55rem 1rem;font-weight:600; }
-        .stTabs [aria-selected="true"] { background:white;box-shadow:0 2px 8px rgba(16,24,40,.08); }
+        div[data-testid="stPlotlyChart"] > div, div[data-testid="stPlotlyChart"] .js-plotly-plot { width:100% !important;max-width:100%; }
+        div[data-testid="stDataFrame"] { max-width:100%;border:1px solid #EAECF0;border-radius:14px;overflow:auto; }
+        .stTabs { min-width:0;max-width:100%; }
+        .stTabs [data-baseweb="tab-list"] { gap:.3rem;background:#F2F4F7;padding:.35rem;border-radius:14px;overflow-x:auto;scrollbar-width:none; }
+        .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar { display:none; }
+        [data-testid="stMain"] .stTabs [data-baseweb="tab"],
+        [data-testid="stMain"] .stTabs [role="tab"] {
+          flex:0 0 auto;border-radius:10px;padding:.55rem 1rem;font-weight:600;color:#344054 !important;
+          background:#E7EAF1 !important;opacity:1 !important;white-space:nowrap;
+        }
+        [data-testid="stMain"] .stTabs [role="tab"] * { color:#344054 !important;opacity:1 !important; }
+        [data-testid="stMain"] .stTabs [role="tab"]:hover { background:#DDDFF0 !important;color:#5138C7 !important; }
+        [data-testid="stMain"] .stTabs [role="tab"]:hover * { color:#5138C7 !important; }
+        [data-testid="stMain"] .stTabs [aria-selected="true"] {
+          background:#FFFFFF !important;border:1px solid #D8D2FF;box-shadow:0 3px 10px rgba(16,24,40,.1);color:#6D4FEA !important;
+        }
+        [data-testid="stMain"] .stTabs [aria-selected="true"] * { color:#6D4FEA !important;opacity:1 !important; }
+        [data-testid="stMain"] .stTabs [role="tab"]:focus-visible { outline:2px solid #24C8A5;outline-offset:2px; }
+        .stTabs button[aria-label*="scroll" i] { background:#FFFFFF !important;color:#344054 !important;border:1px solid #D0D5DD; }
+        .stTabs button[aria-label*="scroll" i] svg { color:#344054 !important;fill:currentColor; }
+        [data-testid="stSegmentedControl"] { max-width:100%;overflow-x:auto;scrollbar-width:none; }
+        [data-testid="stSegmentedControl"]::-webkit-scrollbar { display:none; }
+        [data-testid="stSegmentedControl"] > div { min-width:max-content; }
         .stButton > button, .stDownloadButton > button { border-radius:12px;font-weight:700;min-height:2.8rem; }
         .stButton > button[kind="primary"] { background:linear-gradient(100deg,#6D4FEA,#7C5CFC);border:0; }
         [data-testid="stFileUploader"] { background:rgba(255,255,255,.88);border:1px solid #E5E7EB;border-radius:22px;
           padding:1.1rem 1.2rem;box-shadow:0 20px 60px rgba(30,41,59,.07); }
         [data-testid="stFileUploaderDropzone"] { border-radius:14px;border:1.5px dashed #C7D0E0;background:#F8FAFC; }
-        @media (max-width:768px) { .block-container { padding-top:5.5rem; } .hero-title { font-size:2.4rem; } }
+        @media (max-width:1100px) and (min-width:769px) {
+          .block-container { padding-left:1.5rem;padding-right:1.5rem; }
+          [data-testid="stHorizontalBlock"] { flex-wrap:wrap;gap:1rem; }
+          [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] { flex:1 1 240px;min-width:240px; }
+        }
+        @media (max-width:768px) {
+          html { scroll-padding-top:4rem; }
+          [data-testid="stHeader"] { height:3.5rem; }
+          .block-container { width:100%;max-width:100%;padding:4.1rem 1rem 3rem;overflow-x:hidden; }
+          [data-testid="stSidebar"] { width:min(82vw,300px) !important;max-width:300px; }
+          [data-testid="stSidebarContent"] { width:100%;padding-left:.85rem;padding-right:.85rem; }
+          [data-testid="stMain"] h1 { font-size:1.7rem !important;line-height:1.15 !important;letter-spacing:-.04em;margin:.25rem 0 .5rem; }
+          [data-testid="stMain"] h2 { font-size:1.35rem !important;line-height:1.2 !important; }
+          [data-testid="stMain"] h3 { font-size:1.15rem !important; }
+          .hero-title { font-size:2.25rem;line-height:1.04;letter-spacing:-.05em; }
+          .hero-copy { font-size:.98rem;line-height:1.55;margin-bottom:1.35rem; }
+          .product-signature { margin-bottom:1.6rem; }
+          .eyebrow { font-size:.7rem;letter-spacing:.1em; }
+          [data-testid="stHorizontalBlock"] { flex-wrap:wrap !important;gap:.75rem !important; }
+          [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] { flex:1 1 100% !important;width:100% !important;min-width:0 !important; }
+          .metric-card { min-height:auto;padding:1rem;border-radius:16px; }
+          .metric-value { font-size:1.55rem; }
+          .insight-card { min-height:auto;padding:1rem; }
+          .section-title { font-size:1.25rem;line-height:1.25; }
+          .section-copy { font-size:.85rem;line-height:1.45; }
+          .stTabs [data-baseweb="tab-list"] { border-radius:12px;padding:.3rem;scroll-snap-type:x proximity; }
+          .stTabs [data-baseweb="tab"] { min-height:2.7rem;padding:.48rem .85rem;scroll-snap-align:start; }
+          [data-testid="stSegmentedControl"] label { min-height:2.65rem;white-space:nowrap; }
+          .stButton > button, .stDownloadButton > button { width:100%;min-height:2.85rem; }
+          [data-testid="stFileUploader"] { padding:.8rem;border-radius:16px; }
+          [data-testid="stFileUploaderDropzone"] { padding:.8rem; }
+          div[data-testid="stPlotlyChart"] { padding:.15rem;border-radius:14px; }
+          div[data-testid="stDataFrame"] { width:100%;max-width:calc(100vw - 2rem); }
+          [data-testid="stTextInput"] input, [data-testid="stNumberInput"] input,
+          [data-testid="stTextArea"] textarea { font-size:16px; }
+        }
+        @media (max-width:420px) {
+          .block-container { padding-left:.75rem;padding-right:.75rem; }
+          .hero-title { font-size:2rem; }
+          .brand-name { font-size:.98rem; }
+          .stTabs [data-baseweb="tab"] { padding:.45rem .72rem; }
+          div[data-testid="stDataFrame"] { max-width:calc(100vw - 1.5rem); }
+        }
+        @media (prefers-reduced-motion:reduce) { * { scroll-behavior:auto !important;transition:none !important; } }
         #MainMenu, footer { visibility:hidden; }
         </style>
         """,
@@ -201,6 +294,7 @@ def data_health(df: pd.DataFrame) -> tuple[int, dict]:
 def initialize_workspace(dataset_id: str, source_df: pd.DataFrame) -> None:
     if st.session_state.get("workspace_id") != dataset_id:
         st.session_state.workspace_id = dataset_id
+        st.session_state.workspace_section = "Overview"
         st.session_state.working_df = source_df.copy()
         st.session_state.undo_stack = []
         st.session_state.transform_history = []
@@ -437,12 +531,20 @@ def build_markdown_report(df: pd.DataFrame, file_name: str, ai_report: str | Non
     return "\n".join(lines)
 
 
-def render_sidebar(df: pd.DataFrame, file_name: str, file_size: int) -> None:
+def render_sidebar(df: pd.DataFrame, file_name: str, file_size: int) -> str:
     numeric, categorical, dates = column_groups(df)
     st.sidebar.markdown(
         '<div class="brand"><div class="brand-mark">Z</div><div><div class="brand-name">ZubeAnalystOS</div>'
         '<div class="brand-sub">Decision intelligence</div></div></div>', unsafe_allow_html=True,
     )
+    st.sidebar.caption("WORKSPACE MENU")
+    selected_section = st.sidebar.radio(
+        "Workspace",
+        WORKSPACE_SECTIONS,
+        key="workspace_section",
+        label_visibility="collapsed",
+    )
+    st.sidebar.divider()
     st.sidebar.caption("ACTIVE DATASET")
     st.sidebar.markdown(f"**{file_name}**")
     st.sidebar.caption(f"{file_size / 1024:.1f} KB · {len(df):,} rows · {len(df.columns)} fields")
@@ -455,6 +557,7 @@ def render_sidebar(df: pd.DataFrame, file_name: str, file_size: int) -> None:
     st.sidebar.divider()
     st.sidebar.caption("SESSION")
     st.sidebar.info("Your dataset stays in this Streamlit session and is only summarized when you request AI analysis.")
+    return selected_section
 
 
 def render_landing() -> None:
@@ -632,68 +735,210 @@ def render_relationships(df: pd.DataFrame) -> None:
         st.caption("Scatter plot uses a reproducible 5,000-row sample for responsive exploration.")
 
 
+def summarize_chart_data(
+    df: pd.DataFrame,
+    category: str,
+    measure: str,
+    aggregation: str,
+    top_n: int = 15,
+    series: str | None = None,
+) -> tuple[pd.DataFrame, str]:
+    """Create a compact, chart-ready table without changing the working dataset."""
+    grouping = [category] + ([series] if series else [])
+    working = df[grouping + ([] if measure == "Record count" else [measure])].copy()
+    for column in grouping:
+        working[column] = working[column].fillna("(Missing)").astype(str)
+    if measure == "Record count":
+        result = working.groupby(grouping, dropna=False).size().reset_index(name="Records")
+        value_column = "Records"
+    else:
+        result = working.groupby(grouping, dropna=False)[measure].agg(aggregation.lower()).reset_index()
+        value_column = measure
+    totals = result.groupby(category, dropna=False)[value_column].sum().nlargest(top_n).index
+    result = result[result[category].isin(totals)]
+    return result, value_column
+
+
 def render_visual_explorer(df: pd.DataFrame) -> None:
     numeric, categorical, dates = column_groups(df)
-    section_header("Visual explorer", "Build the view your question needs", "Choose a lens; the controls adapt to the fields available in this dataset.")
-    choices = []
-    if numeric:
-        choices.extend(["Distribution", "Box plot"])
+    section_header(
+        "Visual studio",
+        "Turn the dataset into the right story",
+        "Choose a chart family and ZubeAnalystOS will show only the controls that chart needs.",
+    )
+    low_cardinality = [column for column in categorical if df[column].nunique(dropna=True) <= 40]
+    categories = low_cardinality or categorical
+    choices: list[str] = []
     if categorical:
-        choices.append("Category ranking")
+        choices.extend(["Column chart", "Bar chart", "Pie chart", "Doughnut chart", "Funnel chart"])
     if numeric and categorical:
-        choices.append("Segment comparison")
+        choices.extend(["Grouped / stacked columns", "Treemap", "Sunburst", "Radar chart", "Waterfall chart"])
     if dates and numeric:
-        choices.append("Time series")
+        choices.extend(["Line chart", "Area chart"])
+    if len(numeric) >= 2:
+        choices.extend(["Scatter plot", "Bubble chart", "Correlation heatmap"])
+    if numeric:
+        choices.extend(["Histogram", "Box plot", "Violin plot"])
     if not choices:
-        st.info("This dataset has no chartable fields.")
+        st.info("This dataset has no chartable numeric, category, or date fields.")
         return
-    chart_type = st.segmented_control("Analysis lens", choices, default=choices[0], selection_mode="single")
-    controls = st.columns(3)
-    if chart_type == "Distribution":
-        with controls[0]:
-            value = st.selectbox("Measure", numeric, key="dist_measure")
-        with controls[1]:
-            bins = st.slider("Bins", 10, 80, 30)
-        with controls[2]:
-            show_rug = st.toggle("Show rug", value=True)
-        fig = px.histogram(df, x=value, nbins=bins, marginal="rug" if show_rug else None, color_discrete_sequence=[ACCENT])
-    elif chart_type == "Box plot":
-        with controls[0]:
-            value = st.selectbox("Measure", numeric, key="box_measure")
-        viable = [c for c in categorical if df[c].nunique(dropna=True) <= 25]
-        with controls[1]:
-            segment = st.selectbox("Segment", ["None"] + viable, key="box_segment")
-        fig = px.box(df, x=None if segment == "None" else segment, y=value, points="outliers", color=None if segment == "None" else segment, color_discrete_sequence=PLOTLY_COLORS)
-    elif chart_type == "Category ranking":
-        with controls[0]:
-            category = st.selectbox("Category", categorical, key="rank_category")
-        with controls[1]:
-            top_n = st.slider("Top values", 5, 30, 12)
-        counts = df[category].fillna("(Missing)").astype(str).value_counts().head(top_n).sort_values()
-        chart_df = counts.rename_axis(category).reset_index(name="Rows")
-        fig = px.bar(chart_df, x="Rows", y=category, orientation="h", text_auto=",", color_discrete_sequence=[ACCENT])
-    elif chart_type == "Segment comparison":
-        viable = [c for c in categorical if df[c].nunique(dropna=True) <= 30] or categorical
-        with controls[0]:
-            category = st.selectbox("Segment", viable, key="seg_category")
-        with controls[1]:
-            value = st.selectbox("Measure", numeric, key="seg_measure")
-        with controls[2]:
-            aggregation = st.selectbox("Aggregation", ["mean", "median", "sum"])
-        grouped = df.groupby(category, dropna=False)[value].agg(aggregation).nlargest(25).sort_values().reset_index()
-        fig = px.bar(grouped, x=value, y=category, orientation="h", text_auto=".3s", color_discrete_sequence=[TEAL])
-    else:
-        with controls[0]:
-            date = st.selectbox("Date", dates, key="time_date")
-        with controls[1]:
-            value = st.selectbox("Measure", numeric, key="time_measure")
-        with controls[2]:
-            frequency = st.selectbox("Frequency", ["Day", "Week", "Month", "Quarter", "Year"], index=2)
+
+    chooser, note = st.columns([1.2, 2])
+    with chooser:
+        chart_type = st.selectbox("Chart type", choices, key="visual_chart_type")
+    with note:
+        st.caption("Interactive: hover for detail, zoom or select points, and use the camera icon to export a high-resolution PNG.")
+
+    aggregation_options = ["Sum", "Mean", "Median", "Min", "Max"]
+    fig: go.Figure
+    title = chart_type
+
+    if chart_type in {"Column chart", "Bar chart", "Pie chart", "Doughnut chart", "Funnel chart"}:
+        controls = st.columns(4)
+        category = controls[0].selectbox("Category", categorical, key="basic_category")
+        measure = controls[1].selectbox("Value", ["Record count"] + numeric, key="basic_measure")
+        aggregation = controls[2].selectbox("Calculation", aggregation_options, disabled=measure == "Record count", key="basic_aggregation")
+        top_n = controls[3].slider("Categories", 3, 30, 12, key="basic_top_n")
+        chart_df, value_column = summarize_chart_data(df, category, measure, aggregation, top_n)
+        chart_df = chart_df.sort_values(value_column, ascending=False)
+        title = f"{value_column} by {category}"
+        if chart_type == "Column chart":
+            fig = px.bar(chart_df, x=category, y=value_column, text_auto=".3s", color_discrete_sequence=[ACCENT])
+        elif chart_type == "Bar chart":
+            fig = px.bar(chart_df.sort_values(value_column), x=value_column, y=category, orientation="h", text_auto=".3s", color_discrete_sequence=[TEAL])
+        elif chart_type in {"Pie chart", "Doughnut chart"}:
+            if (chart_df[value_column] < 0).any():
+                st.info("Pie and doughnut charts require non-negative values. Choose Record count or another measure.")
+                return
+            fig = px.pie(chart_df, names=category, values=value_column, hole=.58 if chart_type == "Doughnut chart" else 0, color_discrete_sequence=PLOTLY_COLORS)
+            fig.update_traces(textposition="inside", textinfo="percent+label")
+        else:
+            fig = px.funnel(chart_df, x=value_column, y=category, color=category, color_discrete_sequence=PLOTLY_COLORS)
+
+    elif chart_type == "Grouped / stacked columns":
+        controls = st.columns(5)
+        category = controls[0].selectbox("Category", categories, key="stack_category")
+        series_options = [column for column in categories if column != category]
+        if not series_options:
+            st.info("This chart needs two category fields with a manageable number of values.")
+            return
+        series = controls[1].selectbox("Series", series_options, key="stack_series")
+        measure = controls[2].selectbox("Value", ["Record count"] + numeric, key="stack_measure")
+        aggregation = controls[3].selectbox("Calculation", aggregation_options, disabled=measure == "Record count", key="stack_aggregation")
+        mode = controls[4].selectbox("Layout", ["Grouped", "Stacked", "100% stacked"], key="stack_mode")
+        chart_df, value_column = summarize_chart_data(df, category, measure, aggregation, 15, series)
+        if mode == "100% stacked":
+            totals = chart_df.groupby(category)[value_column].transform("sum").replace(0, np.nan)
+            chart_df["Share"] = chart_df[value_column] / totals * 100
+            value_column = "Share"
+        fig = px.bar(chart_df, x=category, y=value_column, color=series, barmode="group" if mode == "Grouped" else "stack", color_discrete_sequence=PLOTLY_COLORS)
+        if mode == "100% stacked":
+            fig.update_yaxes(ticksuffix="%")
+        title = f"{value_column} by {category} and {series}"
+
+    elif chart_type in {"Line chart", "Area chart"}:
+        controls = st.columns(4)
+        date = controls[0].selectbox("Date", dates, key="trend_date")
+        value = controls[1].selectbox("Measure", numeric, key="trend_measure")
+        aggregation = controls[2].selectbox("Calculation", aggregation_options, key="trend_aggregation")
+        frequency = controls[3].selectbox("Frequency", ["Day", "Week", "Month", "Quarter", "Year"], index=2, key="trend_frequency")
         rules = {"Day": "D", "Week": "W", "Month": "ME", "Quarter": "QE", "Year": "YE"}
-        timeline = df[[date, value]].dropna().set_index(date).resample(rules[frequency])[value].sum().reset_index()
-        fig = px.line(timeline, x=date, y=value, markers=True, color_discrete_sequence=[ACCENT])
-        fig.update_traces(line_width=3)
-    st.plotly_chart(style_figure(fig, chart_type, 520), width="stretch", config={"displaylogo": False, "toImageButtonOptions": {"format": "png", "scale": 2}})
+        timeline = df[[date, value]].dropna().set_index(date).resample(rules[frequency])[value].agg(aggregation.lower()).reset_index()
+        fig = px.area(timeline, x=date, y=value, color_discrete_sequence=[ACCENT]) if chart_type == "Area chart" else px.line(timeline, x=date, y=value, markers=True, color_discrete_sequence=[ACCENT])
+        fig.update_traces(line=dict(width=3))
+        title = f"{value} over time"
+
+    elif chart_type in {"Scatter plot", "Bubble chart"}:
+        controls = st.columns(4)
+        x = controls[0].selectbox("X axis", numeric, key="point_x")
+        y_options = [column for column in numeric if column != x] or numeric
+        y = controls[1].selectbox("Y axis", y_options, key="point_y")
+        color_options = ["None"] + categories
+        color = controls[2].selectbox("Color", color_options, key="point_color")
+        size = None
+        if chart_type == "Bubble chart":
+            size_options = [column for column in numeric if column not in {x, y}] or numeric
+            size = controls[3].selectbox("Bubble size", size_options, key="point_size")
+        plot_df = df.sample(min(len(df), 5000), random_state=42) if len(df) > 5000 else df
+        if size:
+            plot_df = plot_df.copy()
+            plot_df["Bubble size"] = pd.to_numeric(plot_df[size], errors="coerce").abs().fillna(0)
+            size = "Bubble size"
+        fig = px.scatter(plot_df, x=x, y=y, color=None if color == "None" else color, size=size, size_max=42, opacity=.7, color_discrete_sequence=PLOTLY_COLORS, render_mode="webgl")
+        title = f"{y} vs {x}"
+
+    elif chart_type in {"Histogram", "Box plot", "Violin plot"}:
+        controls = st.columns(3)
+        value = controls[0].selectbox("Measure", numeric, key="distribution_measure")
+        segment = controls[1].selectbox("Segment", ["None"] + categories, key="distribution_segment")
+        color = None if segment == "None" else segment
+        if chart_type == "Histogram":
+            bins = controls[2].slider("Bins", 10, 80, 30, key="histogram_bins")
+            fig = px.histogram(df, x=value, color=color, nbins=bins, marginal="rug", opacity=.82, color_discrete_sequence=PLOTLY_COLORS)
+        elif chart_type == "Box plot":
+            fig = px.box(df, x=color, y=value, color=color, points="outliers", color_discrete_sequence=PLOTLY_COLORS)
+        else:
+            fig = px.violin(df, x=color, y=value, color=color, box=True, points="outliers", color_discrete_sequence=PLOTLY_COLORS)
+        title = f"Distribution of {value}"
+
+    elif chart_type == "Correlation heatmap":
+        selected = st.multiselect("Measures", numeric, default=numeric[:min(8, len(numeric))], max_selections=16, key="heatmap_measures")
+        if len(selected) < 2:
+            st.info("Select at least two measures to build a correlation heatmap.")
+            return
+        corr = df[selected].corr()
+        fig = px.imshow(corr, text_auto=".2f", zmin=-1, zmax=1, color_continuous_scale=["#2563EB", "#F8FAFC", "#E54868"], aspect="auto")
+        title = "Correlation heatmap"
+
+    elif chart_type in {"Treemap", "Sunburst"}:
+        controls = st.columns([2, 1, 1])
+        hierarchy = controls[0].multiselect("Hierarchy", categories, default=categories[:min(2, len(categories))], max_selections=3, key="hierarchy_fields")
+        measure = controls[1].selectbox("Value", ["Record count"] + numeric, key="hierarchy_measure")
+        aggregation = controls[2].selectbox("Calculation", aggregation_options, disabled=measure == "Record count", key="hierarchy_aggregation")
+        if not hierarchy:
+            st.info("Select at least one hierarchy field.")
+            return
+        working = df[hierarchy + ([] if measure == "Record count" else [measure])].copy()
+        working[hierarchy] = working[hierarchy].fillna("(Missing)").astype(str)
+        if measure == "Record count":
+            working["Records"] = 1
+            value_column = "Records"
+        else:
+            value_column = measure
+        grouped = working.groupby(hierarchy, dropna=False)[value_column].agg("sum" if measure == "Record count" else aggregation.lower()).reset_index()
+        if (grouped[value_column] < 0).any():
+            st.info("Treemap and sunburst area values must be non-negative. Choose Record count or another measure.")
+            return
+        figure_function = px.treemap if chart_type == "Treemap" else px.sunburst
+        fig = figure_function(grouped, path=hierarchy, values=value_column, color=hierarchy[0], color_discrete_sequence=PLOTLY_COLORS)
+        title = f"{value_column} hierarchy"
+
+    elif chart_type == "Radar chart":
+        controls = st.columns(3)
+        category = controls[0].selectbox("Category", categories, key="radar_category")
+        value = controls[1].selectbox("Measure", numeric, key="radar_measure")
+        aggregation = controls[2].selectbox("Calculation", aggregation_options, key="radar_aggregation")
+        chart_df, value_column = summarize_chart_data(df, category, value, aggregation, 12)
+        chart_df = chart_df.sort_values(value_column, ascending=False)
+        fig = px.line_polar(chart_df, r=value_column, theta=category, line_close=True, markers=True, color_discrete_sequence=[ACCENT])
+        fig.update_traces(fill="toself")
+        title = f"{value_column} profile by {category}"
+
+    else:  # Waterfall chart
+        controls = st.columns(3)
+        category = controls[0].selectbox("Category", categories, key="waterfall_category")
+        value = controls[1].selectbox("Measure", numeric, key="waterfall_measure")
+        aggregation = controls[2].selectbox("Calculation", aggregation_options, key="waterfall_aggregation")
+        chart_df, value_column = summarize_chart_data(df, category, value, aggregation, 15)
+        chart_df = chart_df.sort_values(value_column, key=lambda values: values.abs(), ascending=False)
+        fig = go.Figure(go.Waterfall(x=chart_df[category], y=chart_df[value_column], measure=["relative"] * len(chart_df), connector={"line": {"color": "#D0D5DD"}}))
+        title = f"Contribution to {value_column} by {category}"
+
+    st.plotly_chart(
+        style_figure(fig, title, 540),
+        width="stretch",
+        config={"displaylogo": False, "responsive": True, "toImageButtonOptions": {"format": "png", "scale": 2}},
+    )
 
 
 def render_data_studio(df: pd.DataFrame, source_df: pd.DataFrame, dataset_id: str) -> None:
@@ -1269,32 +1514,29 @@ else:
     dataset_id = hashlib.sha256(active["bytes"]).hexdigest()[:12]
     initialize_workspace(dataset_id, source_df)
     df = st.session_state.working_df
-    render_sidebar(df, active["name"], len(active["bytes"]))
+    selected_section = render_sidebar(df, active["name"], len(active["bytes"]))
     if st.sidebar.button("↻ Analyze another file", width="stretch"):
         st.session_state.active_file = None
         st.rerun()
 
-    st.markdown('<div class="eyebrow">Analysis workspace</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="eyebrow">{html.escape(selected_section)} workspace</div>', unsafe_allow_html=True)
     st.title(active["name"])
     st.caption(f"Working copy: {len(df):,} rows × {len(df.columns)} fields · {len(st.session_state.transform_history)} transformations · updated {datetime.now().strftime('%H:%M')}")
-    overview_tab, prepare_tab, quality_tab, explorer_tab, relationships_tab, kpi_tab, lab_tab, ai_tab, data_tab = st.tabs([
-        "Overview", "Prepare", "Quality", "Visuals", "Relationships", "KPIs", "Decision lab", "AI brief", "Data & export"
-    ])
-    with overview_tab:
+    if selected_section == "Overview":
         render_overview(df)
-    with prepare_tab:
+    elif selected_section == "Prepare":
         render_data_studio(df, source_df, dataset_id)
-    with quality_tab:
+    elif selected_section == "Quality":
         render_quality(df)
-    with explorer_tab:
+    elif selected_section == "Visuals":
         render_visual_explorer(df)
-    with relationships_tab:
+    elif selected_section == "Relationships":
         render_relationships(df)
-    with kpi_tab:
+    elif selected_section == "KPIs":
         render_kpi_board(df)
-    with lab_tab:
+    elif selected_section == "Decision Lab":
         render_advanced_lab(df, dataset_id)
-    with ai_tab:
+    elif selected_section == "AI Brief":
         render_ai(df, dataset_id)
-    with data_tab:
+    elif selected_section == "Data & Export":
         render_data_table(df, active["name"], st.session_state.get(f"ai_report_{dataset_id}"))

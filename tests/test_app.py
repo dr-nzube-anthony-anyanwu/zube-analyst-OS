@@ -18,16 +18,24 @@ def csv_bytes(rows=36):
     return ("\n".join(lines) + "\n").encode()
 
 
-def app_with_data(data=None, name="business.csv", timeout=90):
+def app_with_data(data=None, name="business.csv", timeout=90, section="Overview"):
     data = data if data is not None else csv_bytes()
     app = AppTest.from_file("app.py")
     app.session_state["active_file"] = {"name": name, "bytes": data}
     app.run(timeout=timeout)
+    if section != "Overview":
+        navigate(app, section, timeout)
     return app
 
 
 def widget(elements, label):
     return next(element for element in elements if element.label == label)
+
+
+def navigate(app, section, timeout=90):
+    widget(app.radio, "Workspace").set_value(section)
+    app.run(timeout=timeout)
+    return app
 
 
 def assert_clean_render(app):
@@ -38,12 +46,15 @@ def assert_clean_render(app):
 def test_full_workspace_renders_and_core_downloads_exist():
     app = app_with_data()
     assert_clean_render(app)
-    tab_names = {tab.label for tab in app.tabs}
-    assert {"Overview", "Prepare", "Quality", "Visuals", "Relationships", "KPIs", "Decision lab", "AI brief", "Data & export"} <= tab_names
-    downloads = {item.label for item in app.get("download_button")}
-    assert {"Export recipe", "Download cleaned CSV", "Download analysis report", "Download data dictionary"} <= downloads
-    buttons = {button.label for button in app.button}
-    assert {"Undo last", "Reset all", "Generate decision brief", "Ask ZubeAnalystOS", "↻ Analyze another file"} <= buttons
+    navigation = widget(app.radio, "Workspace")
+    assert navigation.value == "Overview"
+    assert navigation.options == ["Overview", "Prepare", "Quality", "Visuals", "Relationships", "KPIs", "Decision Lab", "AI Brief", "Data & Export"]
+    assert not {"Overview", "Prepare", "Quality", "Visuals", "Relationships", "KPIs", "AI Brief", "Data & Export"} & {tab.label for tab in app.tabs}
+    navigate(app, "Prepare")
+    assert "Export recipe" in {item.label for item in app.get("download_button")}
+    assert {"Undo last", "Reset all", "↻ Analyze another file"} <= {button.label for button in app.button}
+    navigate(app, "Data & Export")
+    assert {"Download cleaned CSV", "Download analysis report", "Download data dictionary"} <= {item.label for item in app.get("download_button")}
 
 
 def test_csv_excel_invalid_and_empty_ingestion():
@@ -65,7 +76,7 @@ def test_csv_excel_invalid_and_empty_ingestion():
 
 
 def test_clean_undo_reset_and_analyze_another_file():
-    app = app_with_data()
+    app = app_with_data(section="Prepare")
     original_rows = len(app.session_state["working_df"])
     widget(app.button, "Apply missing-value treatment").click()
     app.run(timeout=90)
@@ -92,13 +103,14 @@ def test_clean_undo_reset_and_analyze_another_file():
 
 def test_kpi_add_recalculate_clear_and_project_save(monkeypatch, tmp_path):
     monkeypatch.setenv("ZUBE_PROJECTS_DIR", str(tmp_path / "projects"))
-    app = app_with_data()
+    app = app_with_data(section="KPIs")
     widget(app.text_input, "Business name").set_value("Total revenue")
     widget(app.button, "Add KPI").click()
     app.run(timeout=90)
     assert app.session_state["kpi_definitions"][0]["name"] == "Total revenue"
     assert any(metric.label == "Total revenue" for metric in app.metric)
 
+    navigate(app, "Prepare")
     widget(app.text_input, "Project name").set_value("Sales workspace")
     widget(app.button, "Save project").click()
     app.run(timeout=90)
@@ -106,6 +118,7 @@ def test_kpi_add_recalculate_clear_and_project_save(monkeypatch, tmp_path):
     assert saved.exists()
     assert "Total revenue" in saved.read_text(encoding="utf-8")
 
+    navigate(app, "KPIs")
     widget(app.button, "Clear KPI board").click()
     app.run(timeout=90)
     assert app.session_state["kpi_definitions"] == []
@@ -120,7 +133,7 @@ def test_kpi_add_recalculate_clear_and_project_save(monkeypatch, tmp_path):
     ],
 )
 def test_wrangle_form_buttons_enable_and_apply(task, button_label, selections, expected_columns, expected_rows):
-    app = app_with_data()
+    app = app_with_data(section="Prepare")
     app.session_state["wrangling_task"] = task
     app.run(timeout=90)
     button = widget(app.button, button_label)
@@ -144,7 +157,7 @@ def test_wrangle_form_buttons_enable_and_apply(task, button_label, selections, e
     ],
 )
 def test_wrangle_forms_explain_missing_selections(task, button_label, message):
-    app = app_with_data()
+    app = app_with_data(section="Prepare")
     app.session_state["wrangling_task"] = task
     app.run(timeout=90)
     widget(app.button, button_label).click()
@@ -154,7 +167,7 @@ def test_wrangle_forms_explain_missing_selections(task, button_label, message):
 
 
 def test_anomaly_segment_forecast_buttons_and_dynamic_downloads():
-    app = app_with_data()
+    app = app_with_data(section="Decision Lab")
     dataset_id = hashlib.sha256(csv_bytes()).hexdigest()[:12]
 
     widget(app.button, "Detect unusual records").click()
@@ -187,7 +200,7 @@ def test_mocked_ai_brief_and_row_question(monkeypatch):
         return "West contributes the most revenue in the supplied evidence."
 
     monkeypatch.setattr("ai_service.chat_completion", fake_chat)
-    app = app_with_data()
+    app = app_with_data(section="AI Brief")
     widget(app.button, "Generate decision brief").click()
     app.run(timeout=90)
     dataset_id = hashlib.sha256(csv_bytes()).hexdigest()[:12]
@@ -208,3 +221,56 @@ def test_sidebar_button_css_has_normal_hover_focus_and_disabled_states():
     assert "button:focus-visible" in css
     assert "button:disabled" in css
     assert "color:#FFFFFF !important" in css
+
+
+def test_responsive_layout_has_mobile_tablet_and_navigation_guards():
+    source = open("app.py", encoding="utf-8").read()
+    assert 'initial_sidebar_state="auto"' in source
+    assert "@media (max-width:1100px) and (min-width:769px)" in source
+    assert "@media (max-width:768px)" in source
+    assert "@media (max-width:420px)" in source
+    assert 'overflow-x:auto;scrollbar-width:none' in source
+    assert '[data-testid="stMain"] .stTabs [role="tab"] *' in source
+    assert '[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]' in source
+    assert '[data-testid="stSegmentedControl"]' in source
+    assert 'max-width:calc(100vw - 2rem)' in source
+
+
+@pytest.mark.parametrize("section", ["Overview", "Prepare", "Quality", "Visuals", "Relationships", "KPIs", "Decision Lab", "AI Brief", "Data & Export"])
+def test_sidebar_navigation_renders_every_workspace_section(section):
+    app = app_with_data(section=section, timeout=120)
+    assert_clean_render(app)
+    assert app.session_state["workspace_section"] == section
+
+
+def test_visual_studio_offers_and_renders_common_chart_families():
+    app = app_with_data(section="Visuals", timeout=120)
+    chart_picker = widget(app.selectbox, "Chart type")
+    expected = {
+        "Column chart", "Bar chart", "Pie chart", "Doughnut chart", "Funnel chart",
+        "Grouped / stacked columns", "Treemap", "Sunburst", "Radar chart", "Waterfall chart",
+        "Line chart", "Area chart", "Scatter plot", "Bubble chart", "Correlation heatmap",
+        "Histogram", "Box plot", "Violin plot",
+    }
+    assert expected <= set(chart_picker.options)
+    for chart_type in expected:
+        widget(app.selectbox, "Chart type").set_value(chart_type)
+        app.run(timeout=120)
+        assert_clean_render(app)
+
+
+def test_navigation_preserves_analysis_state():
+    app = app_with_data(section="Prepare")
+    original_rows = len(app.session_state["working_df"])
+    widget(app.button, "Apply missing-value treatment").click()
+    app.run(timeout=90)
+    assert len(app.session_state["working_df"]) == original_rows - 1
+    history = list(app.session_state["transform_history"])
+    app.session_state["kpi_definitions"] = [{"name": "Saved KPI", "column": "cost", "aggregation": "sum", "target": None, "prefix": "", "suffix": "", "decimals": 1}]
+    app.session_state["ai_report_preserved"] = "saved report"
+    navigate(app, "Quality")
+    navigate(app, "Overview")
+    assert len(app.session_state["working_df"]) == original_rows - 1
+    assert list(app.session_state["transform_history"]) == history
+    assert app.session_state["kpi_definitions"][0]["name"] == "Saved KPI"
+    assert app.session_state["ai_report_preserved"] == "saved report"

@@ -121,6 +121,7 @@ Important session values include:
 |---|---|
 | `active_file` | Uploaded filename and bytes |
 | `workspace_id` | Identifier for the current source file |
+| `workspace_section` | Selected top-level sidebar workspace |
 | `working_df` | Current transformed dataframe |
 | `undo_stack` | Previous dataframe snapshots, limited to 12 |
 | `transform_history` | Serializable operation records |
@@ -245,18 +246,17 @@ Join recipes record metadata but cannot be fully replayed without the original c
 
 Plotly powers interactive business views, including:
 
-- Histograms and marginal distributions.
-- Box plots.
-- Category rankings.
-- Segment comparisons.
-- Correlation heatmaps.
-- Scatter plots.
-- Time series.
+- Column, horizontal bar, grouped, stacked, and 100% stacked comparisons.
+- Pie, doughnut, treemap, sunburst, and funnel composition views.
+- Line and area trends with date-frequency and aggregation controls.
+- Scatter and bubble relationship views.
+- Histograms, box plots, violin plots, and correlation heatmaps.
+- Radar profiles and waterfall contribution charts.
 - KPI breakdowns.
 - Forecast charts.
 - Parallel-coordinate segment profiles.
 
-Plotly provides hover details, zooming, selection, and high-resolution chart export.
+The chart studio adapts its available chart types and controls to the dataset's numeric, categorical, and date fields. Aggregated views limit high-cardinality categories for readable output without modifying the working dataset. Plotly provides hover details, zooming, selection, responsive sizing, and high-resolution chart export.
 
 ### Seaborn and Matplotlib
 
@@ -411,6 +411,18 @@ Sidebar button styling was corrected for visible normal, hover, focus, active, a
 
 The AI workflow received shorter network limits, a strict wall-clock deadline, smaller executive output, and clear recovery messages after a provider stall.
 
+### Phase 9: responsive workspace
+
+The interface received desktop, tablet, phone, and small-phone breakpoints. Mobile devices now start with the sidebar collapsed, navigation labels retain accessible contrast, long tab and segmented-control rows scroll horizontally, content columns stack, filenames wrap, and charts, tables, uploaders, forms, and buttons remain within the viewport.
+
+### Phase 10: unified sidebar navigation
+
+The nine top-level workspace tabs were replaced by one stateful sidebar menu. Streamlit's collapsible sidebar now serves as the mobile menu, only the selected workspace renders, and Prepare and Decision Lab retain contextual inner tabs with explicit contrast styling.
+
+### Phase 11: expanded visualization studio
+
+The five-lens visual explorer became an adaptive 18-chart studio. It now covers business comparison, composition, time trends, distributions, relationships, hierarchy, profiles, and contribution analysis while retaining responsive Plotly interaction and export behavior.
+
 ## Resolved issues
 
 | Issue | Cause | Resolution | Status |
@@ -425,13 +437,17 @@ The AI workflow received shorter network limits, a strict wall-clock deadline, s
 | Group, pivot, reshape, and KPI buttons remained disabled | Dynamic `disabled` conditions were evaluated only when a Streamlit form first rendered | Kept submit buttons enabled and moved validation to submission time | Resolved |
 | Reshape fields did not refresh correctly | One form widget's options depended on another widget that could not trigger a form rerun | Made selections independent and validated overlap after submission | Resolved |
 | AI brief could spin for several minutes | Socket inactivity timeout did not guarantee a wall-clock deadline | Added connection/read limits and a strict 70-second UI deadline | Resolved |
+| Mobile sidebar obscured the workspace | Sidebar was forced open at every screen size | Changed initial sidebar behavior to automatic and constrained its mobile width | Resolved |
+| Mobile tab labels appeared blank | Inactive tabs inherited a light theme color over a light background | Added explicit normal, selected, and scroll-control contrast | Resolved |
+| Mobile titles, columns, and charts overflowed or consumed excessive space | Desktop spacing and multi-column assumptions were applied to narrow screens | Added responsive typography, spacing, wrapping, stacking, and viewport guards | Resolved |
+| Top-level mobile menu labels remained white or appeared only after interaction | Streamlit's mobile theme could override inactive top-level tab presentation | Replaced top-level tabs with stateful sidebar navigation and retained only contextual inner tabs | Resolved |
 | Tests proved rendering but not all interactions | Initial checks did not click every state-changing workflow | Added engine, AI, and Streamlit interaction regression tests | Resolved |
 
 ## Testing and quality assurance
 
 ### Deterministic suite
 
-The latest verified deterministic suite contains **51 passing tests** and one deselected live-provider test.
+The latest verified deterministic suite contains **63 passing tests** and one deselected live-provider test.
 
 Coverage includes:
 
